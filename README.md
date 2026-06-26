@@ -1,8 +1,4 @@
-# Let’s Gamble! 1-Suit Spider Solitaire Simulation
-
-For final project
-Please include a README file in the zip folder, explaining what each file is, so that we can evaluate your projects easily... 
-# Spider Solitaire (1-Suit) Simulation in Arena
+# Spider Solitaire (1-Suit) Simulation in Arena/Python
 
 ## Overview
 
@@ -39,7 +35,7 @@ The objective is to evaluate the performance of a rule-based playing strategy th
 
 ---
 
-## Arena Model
+## Arena/Python Model
 
 ### Main Flow
 
@@ -69,7 +65,7 @@ Repeat
 
 ---
 
-## Arena Modules Used
+## Arena/Python Modules Used
 
 | Module | Purpose |
 |---------|----------|
@@ -189,7 +185,8 @@ SpiderSolitaireArena/
 ├── Arena/
 │   ├── SpiderSolitaire.doe
 │   └── SpiderSolitaire.mod
-│
+├── Python/
+│   └── main.py
 ├── Documentation/
 │   ├── Project_Report.pdf
 │   ├── Flowchart.png
@@ -223,7 +220,7 @@ SpiderSolitaireArena/
 
 ## Technologies
 
-- Rockwell Arena
+- Arena
 - Arena Basic Process Modules
 - Microsoft Excel
 - GitHub
