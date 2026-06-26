@@ -230,7 +230,7 @@ SpiderSolitaireArena/
 ## Authors
 
 **Group 70: Dinh Tran, Omid Morshed, Lizhi Qin, Yeyan Wang**
-Georgia Institute of Technology
+
 ---
 ## License
 
