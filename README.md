@@ -227,15 +227,11 @@ SpiderSolitaireArena/
 
 ---
 
-## Author
+## Authors
 
-**Dinh Tran**
-
-M.S. Analytics (Computational Data Analytics)  
+**Group 70: Dinh Tran, Omid Morshed, Lizhi Qin, Yeyan Wang**
 Georgia Institute of Technology
-
 ---
-
 ## License
 
 This project is for educational purposes as part of **ISYE 6644 – Simulation**.
