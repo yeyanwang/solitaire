@@ -344,7 +344,7 @@ def run_sims(num_games, strategy, max_moves = 5000):
 
 
 if __name__ == "__main__":
-    results_greedy = run_sims(5000, greedy_strategy)
-    results_random = run_sims(5000, get_random_move)
+    results_greedy = run_sims(500, greedy_strategy)
+    results_random = run_sims(500, get_random_move)
     print(results_greedy)
     print(results_random)
