@@ -1,5 +1,6 @@
 # 1-Suit Spider Solitaire Simulation
-import random 
+import random
+import copy
 
 RANKS = list(range(1, 14)) # integers 1-13 for ease of comparison
 
@@ -86,14 +87,19 @@ class Game:
 
                     if i == k:
                         continue
-                    # empty column
-                    if not other_col:
-                        legal_moves.append((i, k, seq_len))
-                    # non-empty column
-                    elif other_col[-1].face_up:
-                        if other_col[-1].rank == moving_card.rank + 1:
+                        
+                    # non-empty column check
+                    if other_col:
+                        if other_col[-1].face_up:
+                            if other_col[-1].rank == moving_card.rank + 1:
+                                legal_moves.append((i, k, seq_len))
+                    else:
+                        idx = len(col) - seq_len - 1
+                        if seq_len == len(col) or (idx >= 0 and not col[idx].face_up):
                             legal_moves.append((i, k, seq_len))
+                            
         return legal_moves
+
     
     # replaced move_card to allow moving cards in sequence
     def move_seq(self, start_col, end_col, seq_len):
@@ -148,25 +154,19 @@ class Game:
             last_13 = c[-13:]
             expected_ranks = list(range(13, 0, -1))
             actual_ranks = [card.rank for card in last_13]
-
             if actual_ranks == expected_ranks and all(card.face_up for card in last_13):
                 completed_set = [c.pop() for _ in range(13)]
                 completed_set.reverse()
-
                 for foundation in self.foundations:
                     if not foundation:
                         foundation.extend(completed_set)
                         break
-
                 if c and not c[-1].face_up:
                     c[-1].face_up = True
-
                 completed = True
                 continue # check for another completed sequence in the same column
-
             else:
                 break
-
         return completed
 
     def is_won(self):
@@ -193,49 +193,40 @@ def greedy_strategy(state, legal_moves):
         return None
     
     best_m = None 
-    max_seq = -1
+    max_score = -1
 
     for m in legal_moves: 
         start_col, end_col, seq_len = m
         dest_col = state.tableau[end_col] 
-        seq = 0
+        moving_card = state.tableau[start_col][-seq_len]
+        
+        score = seq_len
 
-        if dest_col:
-            for i in range(len(dest_col)):
-                # flip index to check from the bottom
-                card = dest_col[-(i+1)]
-
-                # check sequence when if the card is face up
+        # check if the move continues a run in the destination column
+        if dest_col and dest_col[-1].face_up and dest_col[-1].rank == moving_card.rank + 1:
+            # count how many cards are in the dest col
+            for i in range(1, len(dest_col) + 1):
+                card = dest_col[-i]
                 if card.face_up:
-                    # first card
-                    if i == 0: 
-                        seq = 1
-                    # check if the card ranks in sequence are consecutive
-                    if i > 0: 
-                        card_below = dest_col[-i]
-                        if card.rank == card_below.rank + 1:
-                            seq += 1
-                        else: 
-                            break # stop counting when the sequence is not consecutive
-                else: 
-                    break # face down card does not count toward the sequence
+                    if i > 1 and dest_col[-i].rank != dest_col[-(i-1)].rank + 1:
+                        break
+                    score += 1 
+                else:
+                    break
 
-        seq += seq_len
-
-        # prioritize moves that result in empty columns
+        # prioritize moves that clear columns
         if len(state.tableau[start_col]) == seq_len:
-            seq += 100
+            score += 100
 
         # prioritize moves that flip hidden cards
         if len(state.tableau[start_col]) > seq_len:
             if not state.tableau[start_col][-seq_len-1].face_up:
-                seq += 10
+                score += 10
 
-        # update the max sequence length and best move
-        if seq > max_seq:
-            max_seq = seq
+        # save the best move if score beats our tracking max
+        if score > max_score:
+            max_score = score
             best_m = m
-
     return best_m
 
 # strategy 2: random walks (baseline)
@@ -243,6 +234,54 @@ def get_random_move(state, legal_moves):
     if legal_moves:
         return random.choice(legal_moves)
     return None
+
+# strategy 3: look-ahead strategy
+def lookahead_strategy(state, legal_moves):
+    if not legal_moves:
+        return None
+    
+    best_m = None
+    max_seq = -1
+    
+    legal_moves = sorted(legal_moves, key=lambda x: x[2], reverse=True)[:10]
+
+    for m in legal_moves:
+        start_col, end_col, seq_len = m
+        idx = len(state.tableau[start_col]) - seq_len
+        
+        score = seq_len * 10
+        
+        if idx > 0 and not state.tableau[start_col][idx - 1].face_up:
+            score += 100
+
+        if not state.tableau[end_col]:
+            score += 50
+        
+        if len(state.tableau[start_col]) == seq_len:
+            score += 200
+        
+        # Heavy deepcopy happens much less often now
+        sim = copy.deepcopy(state)
+        sim.move_seq(start_col, end_col, seq_len)
+        
+        after_moves = sim.get_legal_moves()
+        if len(after_moves) > len(legal_moves):
+            score += (len(after_moves) - len(legal_moves)) * 20
+        
+        empty_cols = sum(1 for col in sim.tableau if not col)
+        if empty_cols > 0:
+            score += empty_cols * 30
+
+        before_fdns = sum(1 for f in state.foundations if len(f) == 13)
+        after_fdns = sum(1 for f in sim.foundations if len(f) == 13)
+        if after_fdns > before_fdns:
+            score += 1000
+
+        if score > max_seq:
+            max_seq = score
+            best_m = m
+        
+    return best_m
 
 # set up sim engine
 class SimEngine:
@@ -311,10 +350,8 @@ def run_sims(num_games, strategy, max_moves = 5000):
     total_foundations = 0
 
     for i in range(num_games):
-
         game = Game()
         game.setup_board()
-
         sim = SimEngine(game, strategy)
         result = sim.run(max_moves)
 
@@ -331,7 +368,7 @@ def run_sims(num_games, strategy, max_moves = 5000):
         total_foundations += result["foundations_completed"]
 
     return {
-        "stategy": strategy.__name__,
+        "strategy": strategy.__name__,
         "games": num_games,
         "wins": wins,
         "losses": losses,
@@ -346,5 +383,7 @@ def run_sims(num_games, strategy, max_moves = 5000):
 if __name__ == "__main__":
     results_greedy = run_sims(500, greedy_strategy)
     results_random = run_sims(500, get_random_move)
+    results_lookahead = run_sims(500, lookahead_strategy)
     print(results_greedy)
     print(results_random)
+    print(results_lookahead)
