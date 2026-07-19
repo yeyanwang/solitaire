@@ -187,13 +187,21 @@ class Game:
         print(f"Completed foundations: {sum(1 for f in self.foundations if len(f) == 13)}")
 
 # player strategies
-# strategy 1: greedy strategy to build the longest sequence and prioritize moves that free up columns
+
+# strategy 1: random walks (baseline)
+def get_random_move(state, legal_moves):
+    if legal_moves:
+        return random.choice(legal_moves)
+    return None
+
+# strategy 2: greedy strategy to build the longest sequence and prioritize moves that free up columns
 def greedy_strategy(state, legal_moves):
     if not legal_moves: 
         return None
     
-    best_m = None 
+    best_m = None
     max_score = -1
+    best_moves = []
 
     for m in legal_moves: 
         start_col, end_col, seq_len = m
@@ -226,14 +234,14 @@ def greedy_strategy(state, legal_moves):
         # save the best move if score beats our tracking max
         if score > max_score:
             max_score = score
-            best_m = m
-    return best_m
+            best_moves = [m]
+        elif score == max_score:
+            best_moves.append(m)
 
-# strategy 2: random walks (baseline)
-def get_random_move(state, legal_moves):
-    if legal_moves:
-        return random.choice(legal_moves)
-    return None
+    if best_moves:
+        best_m = random.choice(best_moves)
+
+    return best_m
 
 # strategy 3: look-ahead strategy
 def lookahead_strategy(state, legal_moves):
@@ -288,11 +296,19 @@ class SimEngine:
     def __init__(self, game, strategy):
         self.game = game
         self.strategy = strategy
-        seen_states = set()
+        self.seen_states = set()
+
+    def get_state_key(self):
+        return tuple(
+            tuple((card.rank, card.face_up) for card in col)
+            for col in self.game.tableau
+        )
 
     def run(self, max_moves=5000):
         moves = 0
         deals = 0
+
+        turned_over = 0
 
         while moves < max_moves:
             legal_moves = self.game.get_legal_moves()
@@ -307,11 +323,25 @@ class SimEngine:
 
                 start_col, end_col, seq_len = move
 
+                # determine whether this move reveals a hidden card
+                reveals_hidden = (
+                    len(self.game.tableau[start_col]) > seq_len and
+                    not self.game.tableau[start_col][-seq_len-1].face_up
+                )
+
                 if self.game.move_seq(start_col, end_col, seq_len):
+                    # count new hidden cards
+                    if reveals_hidden:
+                        turned_over += 1
                     moves += 1
 
                     if self.game.is_won():
                         break
+
+                    state_key = self.get_state_key()
+                    if state_key in self.seen_states:
+                        break
+                    self.seen_states.add(state_key)
                 else:
                     break
 
@@ -333,21 +363,19 @@ class SimEngine:
 
         return {
             "won": self.game.is_won(),
-            "lost": not self.game.is_won(),
             "moves": moves,
             "deals": deals,
             "foundations_completed": foundations_completed,
-            "timeout": moves >= max_moves
+            # return number of hidden cards turned over
+            "turned_over": turned_over
         }
 
 def run_sims(num_games, strategy, max_moves = 5000):
     wins = 0
-    losses = 0
-    timeouts = 0
-
     total_moves = 0
     total_deals = 0
     total_foundations = 0
+    total_turned_over = 0
 
     for i in range(num_games):
         game = Game()
@@ -357,33 +385,31 @@ def run_sims(num_games, strategy, max_moves = 5000):
 
         if result["won"]:
             wins += 1
-        else:
-            losses += 1
-
-        if result["timeout"]:
-            timeouts += 1
 
         total_moves += result["moves"]
         total_deals += result["deals"]
         total_foundations += result["foundations_completed"]
+        # add this for alternative evaluation: total hidden cards turned over
+        total_turned_over += result["turned_over"]
+        
+        
 
     return {
         "strategy": strategy.__name__,
         "games": num_games,
         "wins": wins,
-        "losses": losses,
-        "win_rate": wins / num_games,
-        "average_moves": total_moves / num_games,
-        "average_deals": total_deals / num_games,
-        "average_foundations_completed": total_foundations / num_games,
-        "timeouts": timeouts
+        "total_moves": total_moves,
+        "deals": total_deals,
+        "foundations_completed": total_foundations,
+        # add this for alternative evaluation: total hidden cards turned over
+        "total_cards_turned_over": total_turned_over,
+        "avg_cards_turned_over": total_turned_over / num_games
     }
 
-
 if __name__ == "__main__":
-    results_greedy = run_sims(500, greedy_strategy)
     results_random = run_sims(500, get_random_move)
+    results_greedy = run_sims(500, greedy_strategy)
     results_lookahead = run_sims(500, lookahead_strategy)
-    print(results_greedy)
     print(results_random)
+    print(results_greedy)
     print(results_lookahead)
