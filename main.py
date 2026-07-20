@@ -1,6 +1,8 @@
 # 1-Suit Spider Solitaire Simulation
 import random
 import copy
+import statistics
+from scipy import stats as scipy_stats
 
 RANKS = list(range(1, 14)) # integers 1-13 for ease of comparison
 
@@ -18,11 +20,17 @@ class Card:
         return f"{rank_map[self.rank]} of {self.suit}"
 
 class Game:
-    def __init__(self):
+    def __init__(self, seed=None):
         self.deck = [Card(rank) for rank in RANKS * 8]
         # self.suit = ["spades" for card in self.deck]
         # self.color = ["black" for card in self.deck]
-        random.shuffle(self.deck) 
+
+        # set seed for reproducibility
+        if seed is not None:
+            rng = random.Random(seed)
+            rng.shuffle(self.deck)
+        else:
+            random.shuffle(self.deck) 
 
         # initialize 10 tableau columns, 1 stock pile, and 10 foundation piles
         self.tableau = [[] for _ in range(10)] 
@@ -54,7 +62,8 @@ class Game:
                 card = self.stock.pop()
                 card.face_up = True
                 self.tableau[col].append(card)
-                self.check_completed_sequence(col) # check for completed seq after dealing a card incase a completed seq is formed
+                 # check for completed seq after dealing a card incase a completed seq is formed
+                self.check_completed_sequence(col)
             return True
         return False
     
@@ -137,16 +146,13 @@ class Game:
         if self.tableau[start_col] and not self.tableau[start_col][-1].face_up:
             self.tableau[start_col][-1].face_up = True
 
-        # Remove completed sequence if formed
+        # move completed sequence to foundations
         self.check_completed_sequence(end_col)
 
         return True
     
+    # check last 13 cards in a column for a completed sequence and move to foundations if found
     def check_completed_sequence(self, col):
-        """
-        Check if the last 13 cards in a column form:
-        K, Q, J, 10, ..., 2, A
-        """
         c = self.tableau[col]
         completed = False
 
@@ -169,12 +175,12 @@ class Game:
                 break
         return completed
 
+    # check if the game is won (all 8 foundations completed)
     def is_won(self):
-        """Game is won when all 8 foundations are complete."""
         return sum(1 for foundation in self.foundations if len(foundation) == 13) == 8
     
+    # print the current state of the board
     def display_board(self):
-        """Print the current tableau."""
         for i, column in enumerate(self.tableau):
             cards = []
             for card in column:
@@ -187,19 +193,12 @@ class Game:
         print(f"Completed foundations: {sum(1 for f in self.foundations if len(f) == 13)}")
 
 # player strategies
-
-# strategy 1: random walks (baseline)
-def get_random_move(state, legal_moves):
-    if legal_moves:
-        return random.choice(legal_moves)
-    return None
-
-# strategy 2: greedy strategy to build the longest sequence and prioritize moves that free up columns
+# strategy 1: greedy strategy to build the longest sequence and prioritize moves that free up columns
 def greedy_strategy(state, legal_moves):
     if not legal_moves: 
         return None
     
-    best_m = None
+    best_m = None 
     max_score = -1
     best_moves = []
 
@@ -242,6 +241,12 @@ def greedy_strategy(state, legal_moves):
         best_m = random.choice(best_moves)
 
     return best_m
+
+# strategy 2: random walks (baseline)
+def get_random_move(state, legal_moves):
+    if legal_moves:
+        return random.choice(legal_moves)
+    return None
 
 # strategy 3: look-ahead strategy
 def lookahead_strategy(state, legal_moves):
@@ -337,7 +342,8 @@ class SimEngine:
 
                     if self.game.is_won():
                         break
-
+                    
+                    # check for repeated states to avoid infinite loops
                     state_key = self.get_state_key()
                     if state_key in self.seen_states:
                         break
@@ -371,7 +377,7 @@ class SimEngine:
         }
 
 def run_sims(num_games, strategy, max_moves = 5000):
-    wins = 0
+    # wins = 0 # no wins... 
     total_moves = 0
     total_deals = 0
     total_foundations = 0
@@ -383,33 +389,90 @@ def run_sims(num_games, strategy, max_moves = 5000):
         sim = SimEngine(game, strategy)
         result = sim.run(max_moves)
 
-        if result["won"]:
-            wins += 1
+        # if result["won"]:
+        #     wins += 1
 
         total_moves += result["moves"]
         total_deals += result["deals"]
         total_foundations += result["foundations_completed"]
         # add this for alternative evaluation: total hidden cards turned over
         total_turned_over += result["turned_over"]
-        
-        
 
     return {
         "strategy": strategy.__name__,
         "games": num_games,
-        "wins": wins,
+        # "wins": wins,
         "total_moves": total_moves,
         "deals": total_deals,
         "foundations_completed": total_foundations,
         # add this for alternative evaluation: total hidden cards turned over
         "total_cards_turned_over": total_turned_over,
         "avg_cards_turned_over": total_turned_over / num_games
+        }
+
+# crn comparison
+def run_sims_crn(num_games, strategies, max_moves=5000):
+    results = {name: [] for name in strategies}
+
+    for i in range(num_games):
+        # same seed for all strategies
+        seed = i
+        for name, strategy in strategies.items():
+            game = Game(seed=seed)
+            game.setup_board()
+            sim = SimEngine(game, strategy)
+            r = sim.run(max_moves)
+            results[name].append(r)
+    return results
+
+# paired-t ci comaparison
+def paired_t_ci(sample_a, sample_b, confidence=0.95):
+    diffs = [a - b for a, b in zip(sample_a, sample_b)]
+    n = len(diffs)
+    mean_diff = statistics.mean(diffs)
+    std_diff = statistics.stdev(diffs)
+    se_diff = std_diff / (n ** 0.5)
+
+    alpha = 1 - confidence
+    t_crit = scipy_stats.t.ppf(1 - alpha / 2, df=n - 1)
+    margin = t_crit * se_diff
+
+    return {
+        "mean_diff": mean_diff,
+        "ci_low": mean_diff - margin,
+        "ci_high": mean_diff + margin,
+        "games": n
     }
 
 if __name__ == "__main__":
-    results_random = run_sims(500, get_random_move)
-    results_greedy = run_sims(500, greedy_strategy)
-    results_lookahead = run_sims(500, lookahead_strategy)
-    print(results_random)
-    print(results_greedy)
-    print(results_lookahead)
+    crn_results = run_sims_crn(5000, #
+        { "greedy": greedy_strategy,
+            "random": get_random_move,
+            "lookahead": lookahead_strategy
+        }
+    )
+
+    turned_over_by_strategy = {}
+    for name, game_results in crn_results.items():
+        # wins = sum(1 for r in game_results if r["won"])
+        total_moves = sum(r["moves"] for r in game_results)
+        total_deals = sum(r["deals"] for r in game_results)
+        total_foundations = sum(r["foundations_completed"] for r in game_results)
+        turned_over = [r["turned_over"] for r in game_results]
+        total_turned_over = sum(turned_over)
+        turned_over_by_strategy[name] = turned_over
+
+        print({
+            "strategy": name,
+            "games": len(game_results),
+            # "wins": wins,
+            "total_moves": total_moves,
+            "deals": total_deals,
+            "foundations_completed": total_foundations,
+            "total_cards_turned_over": total_turned_over,
+            "avg_cards_turned_over": total_turned_over / len(game_results)
+        })
+
+    # print("greedy vs random:", paired_t_ci(turned_over_by_strategy["greedy"], turned_over_by_strategy["random"]))
+    # print("lookahead vs random:", paired_t_ci(turned_over_by_strategy["lookahead"], turned_over_by_strategy["random"]))
+    print("greedy vs lookahead:", paired_t_ci(turned_over_by_strategy["greedy"], turned_over_by_strategy["lookahead"]))
