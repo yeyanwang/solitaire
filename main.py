@@ -32,7 +32,7 @@ class Game:
         else:
             random.shuffle(self.deck) 
 
-        # initialize 10 tableau columns, 1 stock pile, and 10 foundation piles
+        # initialize 10 tableau columns, 1 stock pile, and 8 foundation piles
         self.tableau = [[] for _ in range(10)] 
         self.stock = []
         self.foundations = [[] for _ in range(8)]
@@ -445,7 +445,7 @@ def paired_t_ci(sample_a, sample_b, confidence=0.95):
     }
 
 if __name__ == "__main__":
-    crn_results = run_sims_crn(5000, #
+    crn_results = run_sims_crn(5000,
         { "greedy": greedy_strategy,
             "random": get_random_move,
             "lookahead": lookahead_strategy
