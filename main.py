@@ -20,7 +20,7 @@ class Card:
         return f"{rank_map[self.rank]} of {self.suit}"
 
 class Game:
-    def __init__(self, seed=None):
+    def __init__(self, seed = None):
         self.deck = [Card(rank) for rank in RANKS * 8]
         # self.suit = ["spades" for card in self.deck]
         # self.color = ["black" for card in self.deck]
@@ -109,7 +109,6 @@ class Game:
                             
         return legal_moves
 
-    
     # replaced move_card to allow moving cards in sequence
     def move_seq(self, start_col, end_col, seq_len):
         if start_col == end_col:
@@ -193,8 +192,14 @@ class Game:
         print(f"Completed foundations: {sum(1 for f in self.foundations if len(f) == 13)}")
 
 # player strategies
-# strategy 1: greedy strategy to build the longest sequence and prioritize moves that free up columns
-def greedy_strategy(state, legal_moves):
+# strategy 1: random walks (baseline)
+def get_random_move(state, legal_moves, rng):
+    if legal_moves:
+        return rng.choice(legal_moves)
+    return None
+
+# strategy 2: greedy strategy to build the longest sequence and prioritize moves that free up columns
+def greedy_strategy(state, legal_moves, rng):
     if not legal_moves: 
         return None
     
@@ -238,25 +243,20 @@ def greedy_strategy(state, legal_moves):
             best_moves.append(m)
 
     if best_moves:
-        best_m = random.choice(best_moves)
+        best_m = rng.choice(best_moves)
 
     return best_m
 
-# strategy 2: random walks (baseline)
-def get_random_move(state, legal_moves):
-    if legal_moves:
-        return random.choice(legal_moves)
-    return None
-
 # strategy 3: look-ahead strategy
-def lookahead_strategy(state, legal_moves):
+def lookahead_strategy(state, legal_moves, rng): 
     if not legal_moves:
         return None
     
     best_m = None
     max_seq = -1
     
-    legal_moves = sorted(legal_moves, key=lambda x: x[2], reverse=True)[:10]
+    original_move_count = len(legal_moves)
+    legal_moves = sorted(legal_moves, key = lambda x: x[2], reverse = True)[:10]
 
     for m in legal_moves:
         start_col, end_col, seq_len = m
@@ -278,8 +278,8 @@ def lookahead_strategy(state, legal_moves):
         sim.move_seq(start_col, end_col, seq_len)
         
         after_moves = sim.get_legal_moves()
-        if len(after_moves) > len(legal_moves):
-            score += (len(after_moves) - len(legal_moves)) * 20
+        if len(after_moves) > original_move_count:
+            score += (len(after_moves) - original_move_count) * 20
         
         empty_cols = sum(1 for col in sim.tableau if not col)
         if empty_cols > 0:
@@ -298,9 +298,10 @@ def lookahead_strategy(state, legal_moves):
 
 # set up sim engine
 class SimEngine:
-    def __init__(self, game, strategy):
+    def __init__(self, game, strategy, rng = None):
         self.game = game
         self.strategy = strategy
+        self.rng = rng if rng is not None else random.Random()
         self.seen_states = set()
 
     def get_state_key(self):
@@ -309,7 +310,7 @@ class SimEngine:
             for col in self.game.tableau
         )
 
-    def run(self, max_moves=5000):
+    def run(self, max_moves = 5000):
         moves = 0
         deals = 0
 
@@ -320,7 +321,7 @@ class SimEngine:
 
             # make a move if there are legal moves available
             if legal_moves:
-                move = self.strategy(self.game, legal_moves)
+                move = self.strategy(self.game, legal_moves, self.rng)
 
                 # break if no valid move is returned by the strategy
                 if move is None:
@@ -376,7 +377,7 @@ class SimEngine:
             "turned_over": turned_over
         }
 
-def run_sims(num_games, strategy, max_moves = 5000):
+def run_sims(num_games, strategy, max_moves = 5000, seed = 1234): # set seed for reproducibility
     # wins = 0 # no wins... 
     total_moves = 0
     total_deals = 0
@@ -384,9 +385,12 @@ def run_sims(num_games, strategy, max_moves = 5000):
     total_turned_over = 0
 
     for i in range(num_games):
-        game = Game()
+        # vary the seed for each game to avoid identical games across iterations
+        game_seed = seed + i
+        rng = random.Random(game_seed)
+        game = Game(seed = game_seed)
         game.setup_board()
-        sim = SimEngine(game, strategy)
+        sim = SimEngine(game, strategy, rng)
         result = sim.run(max_moves)
 
         # if result["won"]:
@@ -411,30 +415,31 @@ def run_sims(num_games, strategy, max_moves = 5000):
         }
 
 # crn comparison
-def run_sims_crn(num_games, strategies, max_moves=5000):
+def run_sims_crn(num_games, strategies, max_moves = 5000, seed = 1234): # set seed for reproducibility
     results = {name: [] for name in strategies}
 
     for i in range(num_games):
-        # same seed for all strategies
-        seed = i
+        # vary the seed for each game to avoid identical games across iterations
+        game_seed = seed + i  
         for name, strategy in strategies.items():
-            game = Game(seed=seed)
+            rng = random.Random(game_seed)
+            game = Game(seed = game_seed)
             game.setup_board()
-            sim = SimEngine(game, strategy)
+            sim = SimEngine(game, strategy, rng) 
             r = sim.run(max_moves)
             results[name].append(r)
     return results
 
 # paired-t ci comaparison
-def paired_t_ci(sample_a, sample_b, confidence=0.95):
+def paired_t_ci(sample_a, sample_b, confidence = 0.95):
     diffs = [a - b for a, b in zip(sample_a, sample_b)]
     n = len(diffs)
     mean_diff = statistics.mean(diffs)
     std_diff = statistics.stdev(diffs)
     se_diff = std_diff / (n ** 0.5)
 
-    alpha = 1 - confidence
-    t_crit = scipy_stats.t.ppf(1 - alpha / 2, df=n - 1)
+    a = 1 - confidence
+    t_crit = scipy_stats.t.ppf(1 - a / 2, df = n - 1)
     margin = t_crit * se_diff
 
     return {
@@ -446,9 +451,9 @@ def paired_t_ci(sample_a, sample_b, confidence=0.95):
 
 if __name__ == "__main__":
     crn_results = run_sims_crn(5000,
-        { "greedy": greedy_strategy,
-            "random": get_random_move,
-            "lookahead": lookahead_strategy
+        { "random": get_random_move,
+         "greedy": greedy_strategy,
+         "lookahead": lookahead_strategy
         }
     )
 
