@@ -423,7 +423,9 @@ def run_sims_crn(num_games, strategies, max_moves = 5000, seed = 1234): # set se
     for i in range(num_games):
         # vary the seed for each game to avoid identical games across iterations
         game_seed = seed + i  
+
         for name, strategy in strategies.items():
+            # set the same seed for each strategy
             rng = random.Random(game_seed)
             game = Game(seed = game_seed)
             game.setup_board()
@@ -434,14 +436,19 @@ def run_sims_crn(num_games, strategies, max_moves = 5000, seed = 1234): # set se
 
 # paired-t ci comaparison
 def paired_t_ci(sample_a, sample_b, confidence = 0.95):
+    # calculate the differences between the two samples
     diffs = [a - b for a, b in zip(sample_a, sample_b)]
-    n = len(diffs)
-    mean_diff = statistics.mean(diffs)
-    std_diff = statistics.stdev(diffs)
-    se_diff = std_diff / (n ** 0.5)
+    
+    n = len(diffs) # number of observations
+    mean_diff = statistics.mean(diffs) # mean of the differences
+    std_diff = statistics.stdev(diffs)  # standard deviation of the differences
+    se_diff = std_diff / (n ** 0.5) # standard error of the mean difference
 
+    # calculate the critical t-value for the given confidence level
     a = 1 - confidence
     t_crit = scipy_stats.t.ppf(1 - a / 2, df = n - 1)
+
+    # calculate the margin of error
     margin = t_crit * se_diff
 
     return {
