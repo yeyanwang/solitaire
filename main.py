@@ -225,7 +225,6 @@ def greedy_strategy(state, legal_moves, rng):
                     score += 1 
                 else:
                     break
-
         # prioritize moves that clear columns
         if len(state.tableau[start_col]) == seq_len:
             score += 100
@@ -273,11 +272,14 @@ def lookahead_strategy(state, legal_moves, rng):
         if len(state.tableau[start_col]) == seq_len:
             score += 200
         
-        # Heavy deepcopy happens much less often now
+        # create a copy of the current state
         sim = copy.deepcopy(state)
+        # simulate the move using the copied state
         sim.move_seq(start_col, end_col, seq_len)
         
+        # evaluate the new state after the move
         after_moves = sim.get_legal_moves()
+        # prioritize moves that increase the number of legal moves available
         if len(after_moves) > original_move_count:
             score += (len(after_moves) - original_move_count) * 20
         
@@ -450,7 +452,7 @@ def paired_t_ci(sample_a, sample_b, confidence = 0.95):
     }
 
 if __name__ == "__main__":
-    crn_results = run_sims_crn(5000,
+    crn_results = run_sims_crn(500,
         { "random": get_random_move,
          "greedy": greedy_strategy,
          "lookahead": lookahead_strategy
