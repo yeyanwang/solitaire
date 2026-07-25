@@ -2,7 +2,10 @@
 import random
 import copy
 import statistics
+import numpy as np
 from scipy import stats as scipy_stats
+from scipy.stats import gaussian_kde
+import matplotlib.pyplot as plt
 
 RANKS = list(range(1, 14)) # integers 1-13 for ease of comparison
 
@@ -246,7 +249,7 @@ def greedy_strategy(state, legal_moves, rng):
 
     return best_m
 
-# strategy 3: look-ahead strategy
+# strategy 3: lookahead strategy
 def lookahead_strategy(state, legal_moves, rng): 
     if not legal_moves:
         return None
@@ -458,8 +461,64 @@ def paired_t_ci(sample_a, sample_b, confidence = 0.95):
         "games": n
     }
 
+def plot_paired_diff_histograms(diffs_500, diffs_5000):
+
+    fig, axes = plt.subplots(1, 2, figsize = (12, 5), sharey = True)
+
+    # x-axis limits for both histograms
+    all_diffs = diffs_500 + diffs_5000
+    xmin = min(all_diffs) - 1
+    xmax = max(all_diffs) + 1
+    x = np.linspace(xmin, xmax, 500)
+
+    # 500 sims
+    axes[0].hist(diffs_500,
+                 bins = 20,
+                 density = True,
+                 alpha = 0.5
+                 )
+
+    kde500 = gaussian_kde(diffs_500)
+    axes[0].plot(x, kde500(x), linewidth = 2)
+
+    axes[0].axvline(0, color = "red", linestyle = "--")
+    axes[0].set_title("500 Simulations")
+    axes[0].set_xlabel("Greedy − Lookahead")
+    axes[0].set_ylabel("Density")
+    axes[0].set_xlim(xmin, xmax)
+
+    # 5000 sims
+    axes[1].hist(diffs_5000,
+                 bins = 30,
+                 density = True,
+                 alpha = 0.5
+                 )
+
+    kde5000 = gaussian_kde(diffs_5000)
+    axes[1].plot(x, kde5000(x), linewidth = 2)
+
+    axes[1].axvline(0, color = "red", linestyle = "--")
+    axes[1].set_title("5000 Simulations")
+    axes[1].set_xlabel("Greedy − Lookahead")
+    axes[1].set_xlim(xmin, xmax)
+
+    plt.tight_layout()
+    plt.savefig("paired_diff_histograms.png", dpi = 150)
+    plt.show()
+
 if __name__ == "__main__":
-    crn_results = run_sims_crn(500,
+    crn_results_500 = run_sims_crn(500,
+        { "random": get_random_move,
+         "greedy": greedy_strategy,
+         "lookahead": lookahead_strategy
+        }
+    )
+
+    turned_over_by_strategy_500 = {}
+    for name, game_results in crn_results_500.items():
+        turned_over_by_strategy_500[name] = [r["turned_over"] for r in game_results]
+
+    crn_results = run_sims_crn(5000,
         { "random": get_random_move,
          "greedy": greedy_strategy,
          "lookahead": lookahead_strategy
@@ -487,6 +546,11 @@ if __name__ == "__main__":
             "avg_cards_turned_over": total_turned_over / len(game_results)
         })
 
-    # print("greedy vs random:", paired_t_ci(turned_over_by_strategy["greedy"], turned_over_by_strategy["random"]))
-    # print("lookahead vs random:", paired_t_ci(turned_over_by_strategy["lookahead"], turned_over_by_strategy["random"]))
+    print("greedy vs random:", paired_t_ci(turned_over_by_strategy["greedy"], turned_over_by_strategy["random"]))
+    print("lookahead vs random:", paired_t_ci(turned_over_by_strategy["lookahead"], turned_over_by_strategy["random"]))
     print("greedy vs lookahead:", paired_t_ci(turned_over_by_strategy["greedy"], turned_over_by_strategy["lookahead"]))
+
+    # compute the paired differences (greedy - lookahead) for 500 and 5000 simulations
+    diffs_500 = [g - l for g, l in zip(turned_over_by_strategy_500["greedy"], turned_over_by_strategy_500["lookahead"])]
+    diffs_5000 = [g - l for g, l in zip(turned_over_by_strategy["greedy"], turned_over_by_strategy["lookahead"])]
+    plot_paired_diff_histograms(diffs_500, diffs_5000)
