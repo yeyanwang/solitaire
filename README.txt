@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-Evaluating Solitaire Strategies Through Monte Carlo Simulation: A Study of Hidden Card Reveals in One-Suit Spider Solitaire
-=======
 Project Title: Evaluating Solitaire Strategies Through Monte Carlo Simulation: A Study of Hidden Card Reveals in One-Suit Spider Solitaire
->>>>>>> 93451a28f781945916724f7279de6e85fabdba8f
 Group 70: Omid Morshed, Yeyan Wang, Lizhi Qin, Dinh Minh Tran
 
 Included in this zip folder
@@ -23,6 +19,9 @@ Included in this zip folder
     - Execution: 
         - Run `python main.py` in your terminal to execute.
 
+* paired_diff_histograms.png
+    - Description: Histograms displaying the distribution of paired differences in scores, visually validating the variance reduction from Common Random Numbers (CRN) and the statistical significance of the strategy comparisons.
+
 Submitted Separately (outside the ZIP folder)
 ---------------------------------------------
 * group70_final_report.pdf
@@ -31,8 +30,4 @@ Submitted Separately (outside the ZIP folder)
         - Background & Description of the Problem
         - Main Findings
         - Conclusions
-<<<<<<< HEAD
         - Citations
-=======
-        - References/Citations
->>>>>>> 93451a28f781945916724f7279de6e85fabdba8f
