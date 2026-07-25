@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 Evaluating Solitaire Strategies Through Monte Carlo Simulation: A Study of Hidden Card Reveals in One-Suit Spider Solitaire
+=======
+Project Title: Evaluating Solitaire Strategies Through Monte Carlo Simulation: A Study of Hidden Card Reveals in One-Suit Spider Solitaire
+>>>>>>> 93451a28f781945916724f7279de6e85fabdba8f
 Group 70: Omid Morshed, Yeyan Wang, Lizhi Qin, Dinh Minh Tran
 
 Included in this zip folder
@@ -27,4 +31,8 @@ Submitted Separately (outside the ZIP folder)
         - Background & Description of the Problem
         - Main Findings
         - Conclusions
+<<<<<<< HEAD
         - Citations
+=======
+        - References/Citations
+>>>>>>> 93451a28f781945916724f7279de6e85fabdba8f
