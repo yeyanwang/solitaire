@@ -1,4 +1,4 @@
-Project Title: A Monte Carlo Simulation Study of Strategy Performance in One-Suit Spider Solitaire: Optimizing Hidden Card Reveals Through Strategic Decision-Making
+Evaluating Solitaire Strategies Through Monte Carlo Simulation: A Study of Hidden Card Reveals in One-Suit Spider Solitaire
 Group 70: Omid Morshed, Yeyan Wang, Lizhi Qin, Dinh Minh Tran
 
 Included in this zip folder
@@ -27,4 +27,4 @@ Submitted Separately (outside the ZIP folder)
         - Background & Description of the Problem
         - Main Findings
         - Conclusions
-        - References/Citations
+        - Citations
