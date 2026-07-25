@@ -8,14 +8,14 @@ Included in this zip folder
 
 * main.py
     - Description: This file contains the complete Python implementation of the project, including:
-        - One-Suit Spider Solitaire game simulation
-        - Strategy implementations (Random Walk, Greedy, and Lookahead)
-        - Monte Carlo simulation engine
-        - Common Random Numbers (CRN) variance reduction
-        - Statistical analysis, including paired t-confidence intervals to compare strategies and confidence intervals to determine whether the difference in mean scores was statistically significant
-        - Summary statistics and results
+        - One-Suit Spider Solitaire game simulation.
+        - Strategy implementations (Random Walk, Greedy, and Lookahead).
+        - Monte Carlo simulation engine.
+        - Common Random Numbers (CRN) variance reduction.
+        - Statistical analysis, including paired t-confidence intervals to compare strategies and confidence intervals to determine whether the difference in mean scores was statistically significant.
+        - Summary statistics and results.
     - Dependencies Used: 
-        - random, copy, statistics, scipy (requires: pip install scipy)
+        - random, copy, statistics, numpy, scipy, matplotlib (requires: pip install numpy, scipy, and matplotlib).
     - Execution: 
         - Run `python main.py` in your terminal to execute.
 
